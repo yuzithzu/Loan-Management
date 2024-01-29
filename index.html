@@ -1,1 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
 
+        .container {
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            width: 400px;
+            max-width: 100%;
+            padding: 20px;
+        }
+
+        h1 {
+            margin: 0;
+            padding: 20px;
+            background-color: #007bff;
+            color: #fff;
+            text-align: center;
+            font-size: 1.8rem;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        input, select, button {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        /* Adjusted width for input boxes */
+        #borrowerName, #loanAmount, #paymentAmount, #paymentDate {
+            width: calc(100% - 20px);
+        }
+
+        button {
+            width: 100%;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        .record-container {
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .record {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .record-details {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .record-details span {
+            font-weight: bold;
+        }
+
+        .record-buttons button {
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            padding: 5px 8px;
+            margin-left: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .record-buttons button:hover {
+            background-color: #218838;
+        }
+
+        .payment-form {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .payment-form label {
+            font-weight: bold;
+        }
+
+        .payment-form input,
+        .payment-form select,
+        .payment-form button {
+            padding: 10px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+
+        .payment-list {
+            max-height: 150px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .payment {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            padding: 10px 0;
+        }
+
+        .clear-button {
+            background-color: #dc3545;
+            color: #fff;
+            padding: 5px 8px;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .clear-button:hover {
+            background-color: #c82333;
+        }
+
+        .totals {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+        }
+
+        .totals div {
+            margin-bottom: 5px;
+        }
+
+        .totals h2 {
+            margin: 0;
+            font-size: 1.2rem;
+        }
+    </style>
+    <title>Loan Management System</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Loan Management System</h1>
+        <label for="borrowerName">Borrower Name:</label>
+        <input type="text" id="borrowerName" placeholder="Enter borrower name">
+        <label for="loanAmount">Loan Amount (PHP):</label>
+        <input type="number" id="loanAmount" placeholder="Enter loan amount">
+        <button onclick="addRecord()">Add Record</button>
+
+        <div class="record-container" id="records">
+            <!-- Records will be displayed here -->
+        </div>
+
+        <div class="payment-form" id="paymentForm" style="display: none;">
+            <label for="paymentRecord">Select Record:</label>
+            <select id="paymentRecord"></select>
+            <label for="paymentAmount">Payment Amount (PHP):</label>
+            <input type="number" id="paymentAmount" placeholder="Enter payment amount">
+            <label for="paymentDate">Payment Date:</label>
+            <input type="date" id="paymentDate">
+            <button onclick="addPayment()">Add Payment</button>
+        </div>
+
+        <div id="paymentList" class="payment-list" style="display: none;">
+            <!-- Payments will be displayed here -->
+        </div>
+
+        <div class="totals">
+            <h2>Total Borrowed Amount: ₱<span id="totalBorrowed">0.00</span></h2>
+            <h2>Total Interest Earned: ₱<span id="totalInterest">0.00</span></h2>
+            <h2>Total Amount Paid: ₱<span id="totalPaid">0.00</span></h2>
+        </div>
+    </div>
+
+    <script>
+        let records = JSON.parse(localStorage.getItem('records')) || [];
+
+        function addRecord() {
+            const borrowerName = document.getElementById('borrowerName').value.trim();
+            const loanAmount = parseFloat(document.getElementById('loanAmount').value);
+
+            if (borrowerName === '' || isNaN(loanAmount) || loanAmount <= 0) {
+                alert('Please enter valid borrower name and loan amount.');
+                return;
+            }
+
+            const record = {
+                name: borrowerName,
+                amount: loanAmount,
+                payments: [],
+            };
+
+            records.push(record);
+            saveRecordsToLocalStorage();
+            displayRecords();
+            showPaymentForm(records.length - 1);
+            updateTotals();
+        }
+
+        function deleteRecord(index) {
+            records.splice(index, 1);
+            saveRecordsToLocalStorage();
+            displayRecords();
+            hidePaymentForm();
+            updateTotals();
+        }
+
+        function showPaymentForm(index) {
+            const paymentForm = document.getElementById('paymentForm');
+            const paymentList = document.getElementById('paymentList');
+            const paymentRecordSelect = document.getElementById('paymentRecord');
+
+            paymentForm.style.display = 'block';
+            paymentList.style.display = 'block';
+
+            // Populate paymentRecordSelect with record options
+            populateRecordSelect(paymentRecordSelect);
+
+            // Select the current record by default
+            paymentRecordSelect.value = index;
+
+            displayPaymentList(index);
+        }
+
+        function hidePaymentForm() {
+            const paymentForm = document.getElementById('paymentForm');
+            const paymentList = document.getElementById('paymentList');
+
+            paymentForm.style.display = 'none';
+            paymentList.style.display = 'none';
+        }
+
+        function displayRecords() {
+            const recordsContainer = document.getElementById('records');
+            recordsContainer.innerHTML = '';
+
+            records.forEach((record, index) => {
+                const recordElement = document.createElement('div');
+                recordElement.classList.add('record');
+
+                const recordDetails = document.createElement('div');
+                recordDetails.classList.add('record-details');
+
+                const nameElement = document.createElement('span');
+                nameElement.textContent = record.name;
+
+                const addPaymentButton = document.createElement('button');
+                addPaymentButton.textContent = 'Update';
+                addPaymentButton.addEventListener('click', () => showPaymentForm(index));
+
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Delete Record';
+                deleteButton.addEventListener('click', () => deleteRecord(index));
+
+                recordDetails.appendChild(nameElement);
+                recordDetails.appendChild(addPaymentButton);
+                recordDetails.appendChild(deleteButton);
+
+                const amountElement = document.createElement('div');
+                amountElement.textContent = `Total Amount: ₱${formatCurrency(record.amount)}`;
+
+                const interestElement = document.createElement('div');
+                interestElement.classList.add('record-interest');
+                interestElement.textContent = `Interest: ₱${formatCurrency(record.amount * 0.2)}`;
+
+                recordElement.appendChild(recordDetails);
+                recordElement.appendChild(amountElement);
+                recordElement.appendChild(interestElement);
+
+                recordsContainer.appendChild(recordElement);
+            });
+        }
+
+        function addPayment() {
+            const paymentRecordSelect = document.getElementById('paymentRecord');
+            const selectedRecordIndex = paymentRecordSelect.value;
+            const paymentAmount = parseFloat(document.getElementById('paymentAmount').value);
+            const paymentDate = document.getElementById('paymentDate').value;
+
+            if (isNaN(paymentAmount) || paymentAmount <= 0 || paymentDate === '') {
+                alert('Please enter a valid payment amount and date.');
+                return;
+            }
+
+            const payment = {
+                amount: paymentAmount,
+                date: paymentDate,
+            };
+
+            records[selectedRecordIndex].payments.push(payment);
+            saveRecordsToLocalStorage();
+            displayPaymentList(selectedRecordIndex);
+            updateTotals();
+            clearPaymentForm();
+        }
+
+        function displayPaymentList(index) {
+            const paymentListContainer = document.getElementById('paymentList');
+            paymentListContainer.innerHTML = '';
+
+            const payments = records[index].payments;
+
+            payments.forEach((payment, paymentIndex) => {
+                const paymentElement = document.createElement('div');
+                paymentElement.classList.add('payment');
+
+                const amountElement = document.createElement('div');
+                amountElement.textContent = `Amount: ₱${formatCurrency(payment.amount)}`;
+
+                const dateElement = document.createElement('div');
+                dateElement.textContent = `Date: ${payment.date}`;
+
+                const clearButton = document.createElement('button');
+                clearButton.textContent = 'Clear Payment';
+                clearButton.classList.add('clear-button');
+                clearButton.addEventListener('click', () => clearPayment(index, paymentIndex));
+
+                paymentElement.appendChild(amountElement);
+                paymentElement.appendChild(dateElement);
+                paymentElement.appendChild(clearButton);
+
+                paymentListContainer.appendChild(paymentElement);
+            });
+
+            updateTotalAmount(index);
+        }
+
+        function updateTotalAmount(index) {
+            const totalAmountElement = document.querySelector(`#records .record:nth-child(${index + 1}) > div:nth-child(2)`);
+            const totalAmount = records[index].amount - getTotalPayments(index);
+            totalAmountElement.textContent = `Total Amount: ₱${formatCurrency(totalAmount)}`;
+        }
+
+        function getTotalPayments(index) {
+            const payments = records[index].payments;
+            return payments.reduce((total, payment) => total + payment.amount, 0);
+        }
+
+        function clearPaymentForm() {
+            document.getElementById('paymentAmount').value = '';
+            document.getElementById('paymentDate').value = '';
+        }
+
+        function clearPayment(recordIndex, paymentIndex) {
+            records[recordIndex].payments.splice(paymentIndex, 1);
+            saveRecordsToLocalStorage();
+            displayPaymentList(recordIndex);
+            updateTotals();
+        }
+
+        function updateTotals() {
+            const totalBorrowedElement = document.getElementById('totalBorrowed');
+            const totalInterestElement = document.getElementById('totalInterest');
+            const totalPaidElement = document.getElementById('totalPaid');
+
+            const totalBorrowed = records.reduce((total, record) => total + record.amount, 0);
+            const totalInterest = records.reduce((total, record) => total + (record.amount * 0.2), 0);
+            const totalPaid = records.reduce((total, record) => total + getTotalPayments(records.indexOf(record)), 0);
+
+            totalBorrowedElement.textContent = formatCurrency(totalBorrowed);
+            totalInterestElement.textContent = formatCurrency(totalInterest);
+            totalPaidElement.textContent = formatCurrency(totalPaid);
+        }
+
+        function saveRecordsToLocalStorage() {
+            localStorage.setItem('records', JSON.stringify(records));
+        }
+
+        function populateRecordSelect(selectElement) {
+            selectElement.innerHTML = '';
+
+            records.forEach((record, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = record.name;
+                selectElement.appendChild(option);
+            });
+        }
+
+        function formatCurrency(amount) {
+            return amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        }
+
+        // Initial display on page load
+        displayRecords();
+        updateTotals();
+    </script>
+</body>
